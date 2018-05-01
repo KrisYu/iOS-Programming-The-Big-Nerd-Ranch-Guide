@@ -9,6 +9,7 @@
 #import "BNRItemsViewController.h"
 #import "BNRItem.h"
 #import "BNRItemStore.h"
+#import "BNRDetailViewController.h"
 
 @interface BNRItemsViewController ()
 
@@ -23,6 +24,13 @@
     self = [super initWithStyle:UITableViewStylePlain];
     
     if (self) {
+        UINavigationItem *navItem = self.navigationItem;
+        navItem.title = @"Homepwner";
+        
+        UIBarButtonItem *bbi = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd target:self action:@selector(addNewItem:)];
+        
+        navItem.rightBarButtonItem = bbi;
+        navItem.leftBarButtonItem = self.editButtonItem;
     }
     return self;
 }
@@ -44,32 +52,16 @@
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
-    return [[[BNRItemStore sharedStore] allItems] count] + 1;
+    return [[[BNRItemStore sharedStore] allItems] count];
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
 {
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"UITableViewCell" forIndexPath:indexPath];
     NSArray *items = [[BNRItemStore sharedStore] allItems];
-    
-    if ([items count] == 0)
-    {
-        cell.textLabel.text = @"No more items!";
-    }
-    else {
-        BNRItem *item = items[indexPath.row];
-        cell.textLabel.text = [item description];
-    }
+    BNRItem *item = items[indexPath.row];
+    cell.textLabel.text = [item description];
     return cell;
-}
-
-- (UIView *)headerView
-{
-    if (!_headerView) {
-        [[NSBundle mainBundle] loadNibNamed:@"HeaderView" owner:self options:nil];
-    }
-    
-    return _headerView;
 }
 
 - (IBAction)addNewItem:(id)sender
@@ -79,18 +71,6 @@
     NSIndexPath *indexPath = [NSIndexPath indexPathForRow:lastRow inSection:0];
     
     [self.tableView insertRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationTop];
-}
-
-- (IBAction)toggleEditingMode:(id)sender
-{
-    if (self.editing) {
-        [sender setTitle:@"Edit" forState:UIControlStateNormal];
-        [self setEditing:NO animated:YES];
-    }
-    else {
-        [sender setTitle:@"Done" forState:UIControlStateNormal];
-        [self setEditing:YES animated:YES];
-    }
 }
 
 - (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath
@@ -107,31 +87,25 @@
 
 - (void)tableView:(UITableView *)tableView moveRowAtIndexPath:(NSIndexPath *)sourceIndexPath toIndexPath:(NSIndexPath *)destinationIndexPath
 {
-    if (destinationIndexPath.row < [[[BNRItemStore sharedStore] allItems] count]) {
-        [[BNRItemStore sharedStore] moveItemAtIndex:sourceIndexPath.row toIndex:destinationIndexPath.row];
-    }
+    [[BNRItemStore sharedStore] moveItemAtIndex:sourceIndexPath.row toIndex:destinationIndexPath.row];
 }
 
-- (BOOL)tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 {
-    UITableViewCell *item = [tableView cellForRowAtIndexPath:indexPath];
+    BNRDetailViewController *detailViewController = [[BNRDetailViewController alloc] init];
+    NSArray *items = [[BNRItemStore sharedStore] allItems];
+    BNRItem *item = items[indexPath.row];
     
-    if ([item.textLabel.text isEqual:@"No more items!"]) {
-        return NO;
-    }
+    detailViewController.item = item;
     
-    return YES;
+    [self.navigationController pushViewController:detailViewController animated:YES];
 }
 
-// https://forums.bignerdranch.com/t/i-am-stuck-on-the-gold-challenge/5647
-- (NSIndexPath *)tableView:(UITableView *)tableView targetIndexPathForMoveFromRowAtIndexPath:(NSIndexPath *)sourceIndexPath toProposedIndexPath:(NSIndexPath *)proposedDestinationIndexPath
+- (void)viewWillAppear:(BOOL)animated
 {
-    if (proposedDestinationIndexPath.row >= [[[BNRItemStore sharedStore] allItems] count]) {
-        return [NSIndexPath indexPathForRow:proposedDestinationIndexPath.row - 1
-                                  inSection:proposedDestinationIndexPath.section];
-    }
+    [super viewWillAppear:animated];
     
-    return proposedDestinationIndexPath;
+    [self.tableView reloadData];
 }
 
 @end
